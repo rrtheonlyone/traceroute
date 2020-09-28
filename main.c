@@ -71,6 +71,7 @@ int main(int argc, char *argv[])
                 break;
             case 'h':
                 usage(argv);
+                break; //unnecessary but to silence compiler warning
             case '?':
             default:
                 if (optopt != ':' && strchr(optstr, optopt)) {
