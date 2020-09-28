@@ -192,9 +192,9 @@ double time_diff(struct timeval* t1, struct timeval *t2)
 
 //checks if given string is a number
 int check_numeric(char* s) {
-    int is_number = 1;
+    int is_number = 0;
     for (size_t i = 0; i < strlen(s); i++) {
-        is_number &= isdigit(s[i]);
+        is_number |= isdigit(s[i]);
     }
     return is_number;
 }
