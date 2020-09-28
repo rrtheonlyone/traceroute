@@ -137,4 +137,5 @@ void find_unused_port(u_short req);
 char* find_host(char *ip_addr); 
 char* ip_to_str(u_long addr); 
 double time_diff(struct timeval* t1, struct timeval *t2);
+int check_numeric(char* s); 
 

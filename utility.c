@@ -33,15 +33,6 @@ void find_usable_addr(const char* node)
     }
 
     conf->dst_name = res->ai_canonname ? strdup(res->ai_canonname) : node;
-    if (res->ai_next) {
-        if (getnameinfo(res->ai_addr, res->ai_addrlen, hbuf, sizeof(hbuf),
-                    NULL, 0, NI_NUMERICHOST) != 0) {
-            strcpy(hbuf, "?");
-        }
-        printf("Warning: %s has multiple addresses; using %s\n", 
-                conf->dst_name, hbuf); 
-    }
-
     conf->dst = calloc(1, sizeof(struct sockaddr));
     memcpy(conf->dst, res->ai_addr, res->ai_addrlen);
     freeaddrinfo(res);
@@ -197,5 +188,14 @@ double time_diff(struct timeval* t1, struct timeval *t2)
 {
     return (double)(t2->tv_sec - t1->tv_sec) * 1000.0 +
         (double)(t2->tv_usec - t1->tv_usec) / 1000.0;
+}
+
+//checks if given string is a number
+int check_numeric(char* s) {
+    int is_number = 1;
+    for (size_t i = 0; i < strlen(s); i++) {
+        is_number &= isdigit(s[i]);
+    }
+    return is_number;
 }
 

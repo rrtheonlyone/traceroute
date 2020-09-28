@@ -26,9 +26,9 @@
 
 #include "traceroute.h"
 
+int get_optarg(); 
 void prep_sockets(); 
 int trace();
-int check_numeric(void); 
 void usage(char**);
 
 //see header file for these
@@ -41,10 +41,6 @@ char dst_prt_name[MX_TEXT];
 
 int main(int argc, char *argv[]) 
 {
-    if (argc != 2) {
-        usage(argv);
-    }
-
     //lets create a conf object to fill up the struct
     conf = calloc(1, sizeof(struct config));
     if (conf == NULL) {
@@ -61,15 +57,20 @@ int main(int argc, char *argv[])
 
     //read in user defined flag
     int c;
-    optstr = "m:w:";
+    optstr = "hm:w:q:";
     while ((c = getopt(argc, argv, optstr)) != -1) {
         switch (c) {
             case 'm':
-                conf->max_ttl = max(1, check_numeric());
+                conf->max_ttl = max(1, get_optarg());
                 break;
             case 'w':
-                conf->timeout = max(1000, check_numeric());
+                conf->timeout = max(1000, get_optarg());
                 break;
+            case 'q':
+                conf->nqueries = max(1, get_optarg());
+                break;
+            case 'h':
+                usage(argv);
             case '?':
             default:
                 if (optopt != ':' && strchr(optstr, optopt)) {
@@ -81,8 +82,14 @@ int main(int argc, char *argv[])
         }
     }
 
+    argc -= optind;
+    argv += optind;
+    if (argc > 1 && check_numeric(argv[1])) {
+        conf->dst_port = atoi(argv[1]);
+    }
+
     //dns + interface lookup before we send
-    find_usable_addr(argv[1]);
+    find_usable_addr(argv[0]);
     find_src_addr();
     find_unused_port(0);
     find_device();
@@ -125,8 +132,9 @@ void prep_sockets() {
 //start sending out packets!
 int trace(void)
 {
-    fprintf(stderr, "Tracing the path to %s on TCP port %s, %d hops max\n",
-            conf->dst_name, dst_prt_name, conf->max_ttl); 
+    fprintf(stderr, "Tracing the path to %s (%s) on TCP port %s, %d hops max\n",
+            conf->dst_name, inet_ntoa(((struct sockaddr_in*)conf->dst)->sin_addr)
+            , dst_prt_name, conf->max_ttl); 
 
     const u_char *buffer;
     struct pcap_pkthdr *pkt_hdr;
@@ -148,7 +156,10 @@ int trace(void)
             log->q = q;
 
             probe(log);
-            //printf("Send packet with ttl %d [q: %d]\n", ttl, q);
+            
+#ifdef DEBUG
+            printf("Send packet with ttl %d [q: %d]\n", ttl, q);
+#endif
 
             int read_sz = 0;
             while ((read_sz = capture(&buffer, &pkt_hdr, conf->timeout)) > 0) {
@@ -200,18 +211,16 @@ int trace(void)
 //help message to inform users of our params
 void usage(char *argv[]) 
 {
-    printf("\nusage %s <host> [destination port]\n", argv[0]);
+    //printf("\nusage %s <host> [destination port]\n", argv[0]);
+    printf("Usage: %s [-q <number of queries>] [-m <max ttl>]\n\
+            [-w <wait time (ms)>] <host> [destination port]\n\n", argv[0]);    
     exit(EXIT_SUCCESS);
 }
 
 //checks if command line flags are numbers
-int check_numeric(void) 
+int get_optarg() 
 {
-    int is_number = 1;
-    for (size_t i = 0; i < strlen(optarg); i++) {
-        is_number &= isdigit(optarg[i]);
-    }
-
+    int is_number = check_numeric(optarg);
     if (!is_number) {
         fprintf(stderr, "Numeric argument required for -%c\n", optopt);
         exit(EXIT_FAILURE);
