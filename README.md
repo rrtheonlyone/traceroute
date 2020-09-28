@@ -37,7 +37,7 @@ sudo apt install make
 
 ## Running the program
 
-A `Makefile` has been provided for convenience. To run the program simply run `make` followed by `./traceroute`. Note that since we are using raw sockets, sudo or root access will be required to run this program.
+A `Makefile` has been provided for convenience. To run the program simply run `make` followed by `./traceroute`. Since we are using raw sockets, sudo or root access will be required to run this program.
 
 ## Command Line Arguments
 
@@ -91,9 +91,9 @@ struct record {
 
 Using the above information we are able to identify whether the incoming `ICMP` or `TCP SYN ACK` packets are related to the packets we send out. This is encompassed in the `packet_ok(..)` method found in line 64 of `packet.c`.
 
-We check the attached ICMP payload and compare against record. We also do necessary checks on the IP addresses of the packet in the `ICMP` packet.
+We check the attached ICMP payload and compare against record. We also do necessary checks on the IP addresses in the `ICMP` packet.
 
-In order to determine whether destination has reached, the same method will return a status code if we see a `DESTINATION UNREACHABLE` or `TCP SYN ACK` packet.
+In order to determine whether destination has reached, the same method will return a specific status code if we see a `DESTINATION UNREACHABLE` or `TCP SYN ACK` packet.
 
 For capturing packets, we use `pcap` library to get the raw packet off the wire. This is to prevent the kernel from intercepting packets that we need to read.
 
