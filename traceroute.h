@@ -1,3 +1,13 @@
+/*
+ * CS3103 Assignment 2 Part C
+ * Name: Rahul Rajesh
+ * Matric Number: A0168864L
+ */
+
+/*
+ * All declarations in our traceroute implementation can be found here
+ */
+
 #include "stdint.h"
 #include "stdio.h"
 #include "stdlib.h"
@@ -15,7 +25,18 @@
 #include <poll.h>
 #include <net/ethernet.h>
 #include <pcap.h>
+#include <ctype.h>
+#include <unistd.h>
+#include <math.h>
 
+//MACROs purely for utility
+
+#define max(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; })
+
+//all user provided input
 struct config {
     uint32_t src;
     const char* dst_name;
@@ -28,6 +49,8 @@ struct config {
     char* device;
 };
 
+//record struct to store details of outgoing/incoming
+//packets
 struct record {
     int ttl;
     int q;
@@ -37,25 +60,51 @@ struct record {
     char *addr, *dnat_ip;
 };
 
-#define MX_PKT 500
+//global constants
+#define MX_PKT_SZ 500
 #define MX_TEXT 500
+#define SYN_PK_SIZE 100
+#define DEFAULT_DEST_PORT 80
 
-extern pcap_t* pcap;
-extern struct config* conf;
-extern int send_sck;
-extern int rcv_sck;
-extern int pcap_sck;
+extern pcap_t* pcap; //capture device
+extern struct config* conf; //parameters
+extern int send_sck; //socket used to send 
+extern int pcap_sck; //socket used to recv
 
+/*
+ * Starts a listening device on specific interface
+ * that captures raw packets straight from the wire
+ * Function set's up filters so that we don't read
+ * in unnecessary packets
+ */
 void start_pcap_listener();
 
+/*
+ * Creates and sends out an empty TCP SYN packet 
+ * and stores timing/packet details in log
+ */
 void probe(struct record *log); 
+
+/*
+ * Attempts to capture a packet. Stores packet + metadata onto buffer
+ * and pkt_hdr respectively. We only wait till timeout
+ */
 int capture(const u_char** buffer, struct pcap_pkthdr** pkt_hdr, int timeout);
+
+/*
+ * Checks if the packet in buffer/pkt_hdr is related to the outgoing packet
+ * using log.
+ * Returns
+ * 0 : packet okay 
+ * 1 : packet okay + des reached
+ * -1 : incorrect packet
+ */
 int packet_ok(u_char* buffer, struct pcap_pkthdr* pkt_hdr, struct record* log);
 
-void find_usable_addr(const char* node);
-void find_src_addr(void);
-void find_device(void);
-void find_unused_port(u_short req);
+/*
+ * Packet related functions below
+ * Reads in all relevant header data and packs it into a byte buffer
+ */
 
 size_t build_syn_packet(u_char* packet, uint32_t src, uint32_t dst, uint16_t id, 
         uint8_t ttl, uint16_t sp ,uint16_t dp);
@@ -70,6 +119,21 @@ void dump_packet(u_char* packet, int len);
 u_short in_chksum(u_char *addr, int len);
 u_short tcp_chksum(u_char *addr); 
 
+
+/*
+ * Utility Functions below to do:
+ * 1. dns lookup
+ * 2. reverse dns 
+ * 3. interface lookup
+ * 4. string conversion / time calculation
+ *
+ * Some of these functions store their result straight to conf obj above!
+ */
+
+void find_usable_addr(const char* node);
+void find_src_addr(void);
+void find_device(void);
+void find_unused_port(u_short req);
 char* find_host(char *ip_addr); 
 char* ip_to_str(u_long addr); 
 double time_diff(struct timeval* t1, struct timeval *t2);

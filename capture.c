@@ -1,13 +1,30 @@
+/*
+ * CS3103 Assignment 2 Part C
+ * Name: Rahul Rajesh
+ * Matric Number: A0168864L
+ */
+
+/*
+ * This library deals directly with pcap listener 
+ * It helps open a connection onto a specific device
+ * Much of the logic is heavily inspired by:
+ * https://github.com/mct/tcptraceroute/blob/master/capture.c
+ */
+
 #include "traceroute.h"
 
+//refer to header files
 pcap_t *pcap;
-char errbuf[MX_TEXT];
-char filter[MX_TEXT];
 int pcap_sck;
 
+//global strings for printing
+char errbuf[MX_TEXT];
+char filter[MX_TEXT];
+
+//opens listener to start capturing and updates global const
 void start_pcap_listener()
 {
-    pcap = pcap_open_live(conf->device, MX_PKT, 0, 10, errbuf);
+    pcap = pcap_open_live(conf->device, MX_PKT_SZ, 0, 10, errbuf);
     if (!pcap) {
         perror("error opening pcap");
         exit(EXIT_FAILURE);
@@ -23,8 +40,6 @@ void start_pcap_listener()
     char* dst_ip = ip_to_str(d_addr);
     char* src_ip = ip_to_str(conf->src);
 
-    //prepare filter
-    //https://github.com/mct/tcptraceroute/blob/master/capture.c#L40-L43
 	snprintf(filter, MX_TEXT, "\n\
 		(tcp and src host %s and src port %d and dst host %s)\n\
 		or ((icmp[0] == 11 or icmp[0] == 3) and dst host %s)",

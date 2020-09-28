@@ -8,53 +8,93 @@
 // Traceroute implementation in C
 // refer to README file for information on running
 
+/* 
+ * The main program that helps us to read in the arguments and 
+ * kickstart the tracing program. The main file helps to also
+ * print the write messages to the correct output streams. 
+ *
+ * Logic within the file has been abstracted into other files
+ * to make this more readable:
+ * - packet.c:
+ * - probe.c:
+ * - util.c:
+ * - capture.c:
+ *
+ * The traceroute.h header file provides struct or vairable declarations
+ * we use in our application
+ */
+
 #include "traceroute.h"
 
 void prep_sockets(); 
 int trace();
+int check_numeric(void); 
 void usage(char**);
 
+//see header file for these
 struct config* conf;
-int send_sck, rcv_sck;
+int send_sck;
 
-const uint16_t DEFAULT_PORT = 80;
-
+//strings for printing later
+char *optstr;
 char dst_prt_name[MX_TEXT];
 
 int main(int argc, char *argv[]) 
 {
     if (argc != 2) {
         usage(argv);
-        return -1;
     }
 
+    //lets create a conf object to fill up the struct
     conf = calloc(1, sizeof(struct config));
     if (conf == NULL) {
         perror("error in calloc for conf\n");
-        return -1;
+        exit(EXIT_FAILURE);
     }   
-    
-    //fill up config object
+   
+    //defaults
     conf->max_ttl = 15;
     conf->nqueries = 3;
-    conf->dst_port = DEFAULT_PORT;
+    conf->dst_port = DEFAULT_DEST_PORT;
     conf->timeout = 5000;
     conf->device = NULL;
 
+    //read in user defined flag
+    int c;
+    optstr = "m:w:";
+    while ((c = getopt(argc, argv, optstr)) != -1) {
+        switch (c) {
+            case 'm':
+                conf->max_ttl = max(1, check_numeric());
+                break;
+            case 'w':
+                conf->timeout = max(1000, check_numeric());
+                break;
+            case '?':
+            default:
+                if (optopt != ':' && strchr(optstr, optopt)) {
+					fprintf(stderr, "Argument required for -%c\n", optopt);
+                    exit(EXIT_FAILURE);
+                }
+				fprintf(stderr, "Unknown command line argument: -%c\n", optopt);
+                usage(argv);
+        }
+    }
+
+    //dns + interface lookup before we send
     find_usable_addr(argv[1]);
     find_src_addr();
     find_unused_port(0);
-
     find_device();
     if (conf->device) {
-        fprintf(stderr, "Selected device %s, address %s, port %d\n", conf->device, ip_to_str(conf->src), conf->src_port);
+        fprintf(stderr, "Selected device %s, address %s, port %d\n", 
+                conf->device, ip_to_str(conf->src), conf->src_port);
     } else {
         fprintf(stderr, "%s\n", "unable to find device");
     }
-
+    
+    //reverse DNS look up 
     struct servent* serv;
-
-    //TODO: this is a security risk (check safety before snprintf)
     if ((serv = getservbyport(htons(conf->dst_port), "tcp")) == NULL) {
         snprintf(dst_prt_name, MX_TEXT, "%d", conf->dst_port);
     } else {
@@ -66,6 +106,7 @@ int main(int argc, char *argv[])
     trace();
 }
 
+//prepares necessary sockets that we will be using
 void prep_sockets() {
     send_sck = socket(PF_INET, SOCK_RAW, IPPROTO_TCP);
     if (send_sck < 1) {
@@ -74,23 +115,18 @@ void prep_sockets() {
     }
 
     int optval = 1;
-    if (setsockopt(send_sck, IPPROTO_IP, IP_HDRINCL, &optval ,sizeof(optval)) < 0) {
+    if (setsockopt(send_sck, IPPROTO_IP, IP_HDRINCL, &optval ,
+                sizeof(optval)) < 0) {
         perror("cannot set socket option for sending socket");
-        exit(EXIT_FAILURE);
-    }
-
-    rcv_sck = socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
-    if (rcv_sck < 1) {
-        perror("error creating socket for rcving");
         exit(EXIT_FAILURE);
     }
 }
 
+//start sending out packets!
 int trace(void)
 {
     fprintf(stderr, "Tracing the path to %s on TCP port %s, %d hops max\n",
             conf->dst_name, dst_prt_name, conf->max_ttl); 
-
 
     const u_char *buffer;
     struct pcap_pkthdr *pkt_hdr;
@@ -161,8 +197,26 @@ int trace(void)
     return 0;
 }
 
+//help message to inform users of our params
 void usage(char *argv[]) 
 {
-    printf("usage %s [dest addr/hostname]\n", argv[0]);
+    printf("\nusage %s <host> [destination port]\n", argv[0]);
+    exit(EXIT_SUCCESS);
+}
+
+//checks if command line flags are numbers
+int check_numeric(void) 
+{
+    int is_number = 1;
+    for (size_t i = 0; i < strlen(optarg); i++) {
+        is_number &= isdigit(optarg[i]);
+    }
+
+    if (!is_number) {
+        fprintf(stderr, "Numeric argument required for -%c\n", optopt);
+        exit(EXIT_FAILURE);
+    }
+
+    return atoi(optarg);
 }
 

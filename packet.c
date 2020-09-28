@@ -1,6 +1,10 @@
 #include "traceroute.h"
 
-//builds a raw syn packet for distribution
+/*
+ * A helper method to build a raw syn packet for us
+ * we pass in the parameters which need to be modified
+ * and keep the rest to a constant value
+ */
 size_t build_syn_packet(u_char* packet, uint32_t src, uint32_t dst, uint16_t id, 
         uint8_t ttl, uint16_t sp ,uint16_t dp)
 {
@@ -35,7 +39,7 @@ size_t build_syn_packet(u_char* packet, uint32_t src, uint32_t dst, uint16_t id,
     return datalen;
 }
 
-//dumps packet for debugging
+//a super useful function to show hex dump
 void dump_packet(u_char* packet, int len)
 {
     u_char *p = packet;
@@ -51,6 +55,12 @@ void dump_packet(u_char* packet, int len)
     fprintf(stderr, "\n");
 }
 
+/*
+ * given a captured packet returns 
+ * -1 if packet is not relevant
+ *  0 if packet is correct
+ *  1 if packet is correct and destination reached
+ */
 int packet_ok(u_char* buffer, struct pcap_pkthdr* pkt_hdr, struct record* log)
 {
     size_t mn = sizeof(struct ip) + sizeof(struct ether_header);
@@ -130,7 +140,7 @@ int packet_ok(u_char* buffer, struct pcap_pkthdr* pkt_hdr, struct record* log)
         perror("get time failed");
         exit(EXIT_FAILURE);
     }
-    
+
     log->delta_time = time_diff(&log->timestamp, &pkt_hdr->ts); 
     return status; 
 }
@@ -155,6 +165,9 @@ void build_tcp_packet(u_char* packet, uint16_t sp, uint16_t dp, uint32_t seq,
     tcp_header->th_urp = htons(urg);
 
     tcp_header->th_sum = tcp_chksum(packet); 
+
+    //silence compiler warnings + this could be useful in future
+    if (payload != NULL && payload_s > 0) {}
 }
 
 //forms ip packet and writes into buffer
@@ -178,6 +191,9 @@ void build_ip_packet(u_char* packet, uint16_t ip_len, uint8_t tos, uint16_t id,
 
     //calculate right check sum
     ip_header->ip_sum = in_chksum(packet, sizeof(struct ip));
+
+    //silence compiler warnings + this could be useful in future
+    if (payload != NULL && payload_s > 0) {}
 }
 
 //calc checksum for ip headers
