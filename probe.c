@@ -37,7 +37,7 @@ void probe(struct record *log)
         exit(EXIT_FAILURE);
     }
 
-    if (sendto(send_sck, packet, datalen, 0, conf->dst, conf->dst->sa_len) < 0) {
+    if (sendto(send_sck, packet, datalen, 0, conf->dst, sizeof(conf->dst)) < 0) {
         perror("sending failed");
         exit(EXIT_FAILURE);
     }

@@ -36,7 +36,7 @@ void find_usable_addr(const char* node)
     if (res->ai_next) {
         if (getnameinfo(res->ai_addr, res->ai_addrlen, hbuf, sizeof(hbuf),
                     NULL, 0, NI_NUMERICHOST) != 0) {
-            strlcpy(hbuf, "?", sizeof(hbuf));
+            strcpy(hbuf, "?");
         }
         printf("Warning: %s has multiple addresses; using %s\n", 
                 conf->dst_name, hbuf); 
